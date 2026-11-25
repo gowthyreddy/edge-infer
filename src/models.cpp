@@ -15,7 +15,7 @@ const char* const kEmotionLabels[kNumEmotions] = {"neutral", "happiness", "surpr
 
 // ONNX Runtime wants a single Env per process.
 static Ort::Env& ort_env() {
-    static Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "edge_infer");
+    static Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "edge_infer");
     return env;
 }
 

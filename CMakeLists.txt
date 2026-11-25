@@ -12,6 +12,9 @@ endif()
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # ---------------- dependencies ----------------
+# Don't look for packages via PATH: an active conda env would otherwise supply its own
+# GTest/libcurl and break linking against the system OpenCV.
+set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
 
 # ONNX Runtime: official prebuilt package from NuGet (it has both linux-x64 and linux-arm64
@@ -50,7 +53,8 @@ target_link_libraries(infer_image PRIVATE edge_infer)
 # ---------------- tests ----------------
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(unit_tests tests/test_models.cpp)
+add_executable(unit_tests tests/test_models.cpp tests/test_golden.cpp)
 target_link_libraries(unit_tests PRIVATE edge_infer GTest::gtest_main)
+target_compile_definitions(unit_tests PRIVATE EDGE_INFER_ROOT="${CMAKE_SOURCE_DIR}")
 include(GoogleTest)
 gtest_discover_tests(unit_tests)

@@ -11,6 +11,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libopencv-dev libgtest-dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python reference deps
+        run: pip install -r reference/requirements.txt
+      - name: Cache models and test images
+        uses: actions/cache@v4
+        with:
+          path: |
+            models/*.onnx
+            data/images
+          key: data-${{ hashFiles('models/download.sh', 'data/download.sh', 'reference/degrade.py') }}
+      - name: Download models and test images
+        run: |
+          ./models/download.sh
+          ./data/download.sh
+          python reference/degrade.py
       - name: Configure
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build

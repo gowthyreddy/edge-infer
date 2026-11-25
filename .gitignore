@@ -1,2 +1,5 @@
 build/
 models/*.onnx
+data/images/
+.venv/
+__pycache__/
