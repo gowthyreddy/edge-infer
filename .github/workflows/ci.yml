@@ -3,9 +3,15 @@ on: [push, pull_request]
 
 jobs:
   build-test:
+    name: ${{ matrix.name }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]   # x86-64 and ARM64
+        include:
+          - { name: x86-64, os: ubuntu-24.04, build_type: Release, sanitize: "" }
+          - { name: arm64, os: ubuntu-24.04-arm, build_type: Release, sanitize: "" }
+          - { name: asan-ubsan, os: ubuntu-24.04, build_type: RelWithDebInfo, sanitize: "address,undefined" }
+          - { name: tsan, os: ubuntu-24.04, build_type: RelWithDebInfo, sanitize: "thread" }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +34,11 @@ jobs:
           ./models/download.sh
           ./data/download.sh
           python reference/degrade.py
+      - name: Allow TSan on this kernel
+        if: matrix.sanitize == 'thread'
+        run: sudo sysctl vm.mmap_rnd_bits=28   # GCC 13 TSan can't handle the default ASLR entropy
       - name: Configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSANITIZE=${{ matrix.sanitize }}
       - name: Build
         run: cmake --build build
       - name: Test

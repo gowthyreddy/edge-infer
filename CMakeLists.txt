@@ -11,11 +11,19 @@ endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
+# Sanitizer builds: cmake -DSANITIZE=address,undefined  or  -DSANITIZE=thread
+set(SANITIZE "" CACHE STRING "sanitizers to enable, e.g. address,undefined or thread")
+if(SANITIZE)
+    add_compile_options(-fsanitize=${SANITIZE} -fno-omit-frame-pointer -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=${SANITIZE})
+endif()
+
 # ---------------- dependencies ----------------
 # Don't look for packages via PATH: an active conda env would otherwise supply its own
 # GTest/libcurl and break linking against the system OpenCV.
 set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs videoio)
+find_package(Threads REQUIRED)
 
 # ONNX Runtime: official prebuilt package from NuGet (it has both linux-x64 and linux-arm64
 # libraries plus the C++ headers), instead of building it from source.
@@ -42,19 +50,24 @@ set_target_properties(onnxruntime PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${onnxruntime_SOURCE_DIR}/build/native/include)
 
 # ---------------- library ----------------
-add_library(edge_infer src/models.cpp)
+add_library(edge_infer src/models.cpp src/thread_pool.cpp src/pipeline.cpp)
 target_include_directories(edge_infer PUBLIC include)
-target_link_libraries(edge_infer PUBLIC ${OpenCV_LIBS} onnxruntime)
+target_link_libraries(edge_infer PUBLIC ${OpenCV_LIBS} onnxruntime Threads::Threads)
 
 # ---------------- apps ----------------
 add_executable(infer_image apps/infer_image.cpp)
 target_link_libraries(infer_image PRIVATE edge_infer)
 
+add_executable(run_pipeline apps/run_pipeline.cpp)
+target_link_libraries(run_pipeline PRIVATE edge_infer)
+
 # ---------------- tests ----------------
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(unit_tests tests/test_models.cpp tests/test_golden.cpp)
+add_executable(unit_tests tests/test_models.cpp tests/test_golden.cpp tests/test_concurrency.cpp
+                          tests/test_pipeline.cpp)
 target_link_libraries(unit_tests PRIVATE edge_infer GTest::gtest_main)
 target_compile_definitions(unit_tests PRIVATE EDGE_INFER_ROOT="${CMAKE_SOURCE_DIR}")
 include(GoogleTest)
-gtest_discover_tests(unit_tests)
+gtest_discover_tests(unit_tests DISCOVERY_TIMEOUT 60
+    PROPERTIES ENVIRONMENT "TSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/tsan.supp")

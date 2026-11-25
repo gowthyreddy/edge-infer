@@ -1,5 +1,7 @@
 build/
+build-*/
 models/*.onnx
 data/images/
+data/*.avi
 .venv/
 __pycache__/

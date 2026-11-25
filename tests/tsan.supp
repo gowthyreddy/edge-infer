@@ -1,0 +1,8 @@
+# ThreadSanitizer suppressions. Only third-party libraries that are not built with TSan:
+# TSan can't see their internal synchronization, so it reports false positives inside them.
+# Our own code (and the queue/pool/pipeline tests) is fully checked.
+
+# OpenCV runs its parallel_for on Intel TBB; reports were races between two TBB worker threads.
+race:libtbb.so
+# OpenCV's image decoding loads GDAL, which takes its own mutexes in an order TSan flags.
+deadlock:libgdal.so

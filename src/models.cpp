@@ -117,6 +117,11 @@ FaceDetector::FaceDetector(const std::string& model_path, float score_threshold,
 
 std::vector<Face> FaceDetector::detect(const cv::Mat& bgr) {
     std::vector<float> input = preprocess_ultraface(bgr);
+    return detect_preprocessed(input, bgr.cols, bgr.rows);
+}
+
+std::vector<Face> FaceDetector::detect_preprocessed(std::vector<float>& input, int image_cols,
+                                                    int image_rows) {
     Ort::Value tensor = make_tensor(input, {1, 3, kDetHeight, kDetWidth});
 
     const char* in_names[] = {input_name_.c_str()};
@@ -134,8 +139,9 @@ std::vector<Face> FaceDetector::detect(const cv::Mat& bgr) {
         if (score < score_threshold_) continue;
         Face f;
         f.score = score;
-        f.box = cv::Rect2f(cv::Point2f(boxes[i * 4 + 0] * bgr.cols, boxes[i * 4 + 1] * bgr.rows),
-                           cv::Point2f(boxes[i * 4 + 2] * bgr.cols, boxes[i * 4 + 3] * bgr.rows));
+        f.box =
+            cv::Rect2f(cv::Point2f(boxes[i * 4 + 0] * image_cols, boxes[i * 4 + 1] * image_rows),
+                       cv::Point2f(boxes[i * 4 + 2] * image_cols, boxes[i * 4 + 3] * image_rows));
         faces.push_back(f);
     }
     return nms(std::move(faces), nms_threshold_);

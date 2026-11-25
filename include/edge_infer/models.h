@@ -37,6 +37,10 @@ class FaceDetector {
     explicit FaceDetector(const std::string& model_path, float score_threshold = 0.7f,
                           float nms_threshold = 0.3f);
     std::vector<Face> detect(const cv::Mat& bgr);
+    // Same as detect(), for when preprocess_ultraface() already ran (e.g. on another thread).
+    // image_cols/rows are the original image size, used to scale boxes back to pixels.
+    std::vector<Face> detect_preprocessed(std::vector<float>& input, int image_cols,
+                                          int image_rows);
 
    private:
     Ort::Session session_;
