@@ -1,0 +1,2 @@
+Checks: '-*,bugprone-*,performance-*,clang-analyzer-*,-bugprone-easily-swappable-parameters'
+HeaderFilterRegex: 'include/edge_infer/.*'
